@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -123,21 +124,29 @@ function AuthForm({ onAuth }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const captchaRef = useRef(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!captchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
       const { error: authError } =
         mode === "login"
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password });
+          ? await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
+          : await supabase.auth.signUp({ email, password, options: { captchaToken } });
       if (authError) throw authError;
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setCaptchaToken(null);
+      captchaRef.current?.reset();
     }
   }
 
@@ -252,9 +261,20 @@ function AuthForm({ onAuth }) {
             </div>
           )}
 
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+            <Turnstile
+              ref={captchaRef}
+              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+              options={{ theme: "light" }}
+            />
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captchaToken}
             style={{
               width: "100%",
               padding: "16px",
@@ -264,8 +284,8 @@ function AuthForm({ onAuth }) {
               borderRadius: 14,
               fontSize: 15,
               fontWeight: 700,
-              cursor: loading ? "wait" : "pointer",
-              opacity: loading ? 0.7 : 1,
+              cursor: loading || !captchaToken ? "not-allowed" : "pointer",
+              opacity: loading || !captchaToken ? 0.7 : 1,
               boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
               letterSpacing: "0.02em",
             }}
