@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+);
 
 const PAIN_COLORS = {
   0: "#4ade80",
@@ -60,183 +66,6 @@ const MEDS = [
   "Other",
 ];
 
-const INITIAL_ENTRIES = [
-  {
-    id: "2025-02-08",
-    date: "2025-02-08",
-    label: "Day 1 — Super Bowl Night",
-    pain: 7,
-    onset: "Evening",
-    duration: "All night",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "None",
-    relief: "",
-    notes: "First night of headache. Super Bowl Sunday.",
-    logged: true,
-  },
-  {
-    id: "2025-02-09",
-    date: "2025-02-09",
-    label: "Day 2 — Volleyball",
-    pain: 6,
-    onset: "Afternoon",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Exercise", "Food/drink"],
-    medication: "None",
-    relief: "No relief",
-    notes:
-      "Played volleyball. Felt dizzy during the game. Did not eat beforehand. Tired that night — napped when she got home.",
-    logged: true,
-  },
-  {
-    id: "2025-02-10",
-    date: "2025-02-10",
-    label: "Day 3 — Receding",
-    pain: 4,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Food/drink"],
-    medication: "None",
-    relief: "Partial relief",
-    notes: "Felt like it was receding — not as bad. Had alcohol.",
-    logged: true,
-  },
-  {
-    id: "2025-02-11",
-    date: "2025-02-11",
-    label: "Day 4 — Doctor Visit",
-    pain: 5,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "Naproxen",
-    relief: "",
-    notes:
-      "Saw family doctor (not her usual doctor). Went out at night but did not drink because of the headache. Took at least 1 Naproxen.",
-    logged: true,
-  },
-  {
-    id: "2025-02-12",
-    date: "2025-02-12",
-    label: "Day 5 — Pasta Class",
-    pain: 5,
-    onset: "Afternoon",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Food/drink"],
-    medication: "Naproxen",
-    relief: "",
-    notes:
-      "Pasta making class. Had wine that night. Headache coming in and out throughout the day. Took 1 Naproxen.",
-    logged: true,
-  },
-  {
-    id: "2025-02-13",
-    date: "2025-02-13",
-    label: "Day 6 — Mild",
-    pain: 3,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "Naproxen",
-    relief: "Partial relief",
-    notes: "Mild headache. Severity not recalled. Took 2 Naproxen.",
-    logged: true,
-  },
-  {
-    id: "2025-02-14",
-    date: "2025-02-14",
-    label: "Day 7 — Valentine's Day, Mild",
-    pain: 3,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "Naproxen",
-    relief: "",
-    notes: "Headache mild throughout the day. Took 1 Naproxen.",
-    logged: true,
-  },
-  {
-    id: "2025-02-15",
-    date: "2025-02-15",
-    label: "Day 8 — Not Great",
-    pain: 6,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "Naproxen",
-    relief: "",
-    notes:
-      "Not a good day. Was complaining to her mom about the headache. May have taken Naproxen (does not remember). Last confirmed day of Naproxen use.",
-    logged: true,
-  },
-  {
-    id: "2025-02-16",
-    date: "2025-02-16",
-    label: "Day 9 — Mild",
-    pain: 3,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "None",
-    relief: "",
-    notes: "Mild. No medication taken. Naproxen stopped.",
-    logged: true,
-  },
-  {
-    id: "2025-02-17",
-    date: "2025-02-17",
-    label: "Day 10 — Mild",
-    pain: 3,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Unknown"],
-    medication: "Tylenol",
-    relief: "",
-    notes: "Mild. Took 2x Extra Strength Tylenol.",
-    logged: true,
-  },
-  {
-    id: "2025-02-18",
-    date: "2025-02-18",
-    label: "Day 11 — Notably Worse",
-    pain: 6,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Stress"],
-    medication: "None",
-    relief: "No relief",
-    notes:
-      "Headache notably worse. No medication taken. Increasing frustration that headache is not resolving after multiple weeks.",
-    logged: true,
-  },
-  {
-    id: "2025-02-19",
-    date: "2025-02-19",
-    label: "Day 12 — Worse",
-    pain: 7,
-    onset: "Morning",
-    duration: "All day",
-    location: "Whole Head",
-    triggers: ["Stress"],
-    medication: "Tylenol",
-    relief: "",
-    notes:
-      "Same as yesterday or worse. Day 12 of continuous headache. Took 2x Extra Strength Tylenol at 5:30 PM. Relief TBD.",
-    logged: true,
-  },
-];
-
 function formatDate(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
@@ -267,6 +96,15 @@ function normalizeMedications(entry) {
   return [];
 }
 
+function formatTime(timeStr) {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":");
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
 const emptyForm = () => ({
   date: today(),
   pain: 5,
@@ -279,36 +117,259 @@ const emptyForm = () => ({
   notes: "",
 });
 
+function AuthForm({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: authError } =
+        mode === "login"
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password });
+      if (authError) throw authError;
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        fontFamily: "'DM Sans', 'SF Pro Display', -apple-system, sans-serif",
+        background: "#FFF8F0",
+        minHeight: "100dvh",
+        color: "#2D1B00",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { background: #FFF8F0; }
+        input, button { font-family: 'DM Sans', -apple-system, sans-serif; outline: none; }
+      `}</style>
+
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <h1
+            style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: 36,
+              fontWeight: 400,
+              color: "#2D1B00",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}
+          >
+            Headache{" "}
+            <span
+              style={{
+                fontStyle: "italic",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Tracker
+            </span>
+          </h1>
+          <p style={{ fontSize: 14, color: "rgba(45,27,0,0.45)" }}>
+            {mode === "login" ? "Welcome back" : "Create your account"}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 16 }}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              required
+              style={{
+                width: "100%",
+                background: "rgba(45,27,0,0.03)",
+                border: "1.5px solid rgba(45,27,0,0.1)",
+                borderRadius: 14,
+                color: "#2D1B00",
+                padding: "14px 16px",
+                fontSize: 15,
+                WebkitAppearance: "none",
+                minHeight: 48,
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              minLength={6}
+              style={{
+                width: "100%",
+                background: "rgba(45,27,0,0.03)",
+                border: "1.5px solid rgba(45,27,0,0.1)",
+                borderRadius: 14,
+                color: "#2D1B00",
+                padding: "14px 16px",
+                fontSize: 15,
+                WebkitAppearance: "none",
+                minHeight: 48,
+              }}
+            />
+          </div>
+
+          {error && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: "12px 16px",
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                borderRadius: 12,
+                color: "#f87171",
+                fontSize: 13,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "16px",
+              background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+              color: "#09090b",
+              border: "none",
+              borderRadius: 14,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: loading ? "wait" : "pointer",
+              opacity: loading ? 0.7 : 1,
+              boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {loading
+              ? "..."
+              : mode === "login"
+                ? "Sign In"
+                : "Sign Up"}
+          </button>
+        </form>
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 24,
+            fontSize: 13,
+            color: "rgba(45,27,0,0.45)",
+          }}
+        >
+          {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+          <button
+            onClick={() => {
+              setMode(mode === "login" ? "signup" : "login");
+              setError(null);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#fbbf24",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            {mode === "login" ? "Sign up" : "Sign in"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HeadacheTracker() {
-  const [entries, setEntries] = useState(INITIAL_ENTRIES);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [entries, setEntries] = useState([]);
   const [view, setView] = useState("log");
   const [form, setForm] = useState(emptyForm());
   const [editingId, setEditingId] = useState(null);
   const [saved, setSaved] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
 
+  // Auth listener
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await window.storage?.get("headache_entries");
-        if (res && res.value) {
-          const stored = JSON.parse(res.value);
-          if (stored.length > 0) setEntries(stored);
-        }
-      } catch {}
-      setLoaded(true);
-    }
-    load();
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthLoading(false);
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
+  // Load entries when session exists
   useEffect(() => {
-    if (!loaded) return;
-    window.storage
-      ?.set("headache_entries", JSON.stringify(entries))
-      .catch(() => {});
-  }, [entries, loaded]);
+    if (!session) return;
+    async function load() {
+      const { data, error } = await supabase
+        .from("headache_entries")
+        .select("*")
+        .order("date", { ascending: true });
+      if (!error && data) setEntries(data);
+    }
+    load();
+  }, [session]);
+
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          background: "#FFF8F0",
+          minHeight: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "rgba(45,27,0,0.4)",
+          fontFamily: "'DM Sans', -apple-system, sans-serif",
+          fontSize: 14,
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthForm />;
+  }
 
   function toggleLocation(l) {
     setForm((f) => ({
@@ -351,25 +412,52 @@ export default function HeadacheTracker() {
     }));
   }
 
-  function saveEntry() {
-    const entry = {
-      ...form,
-      id: editingId || form.date + "_" + Date.now(),
-      logged: true,
+  async function saveEntry() {
+    setSaving(true);
+    const payload = {
+      date: form.date,
+      pain: form.pain,
+      onset: form.onset || null,
+      duration: form.duration || null,
+      location: form.location,
+      triggers: form.triggers,
+      medications: form.medications,
+      relief: form.relief || null,
+      notes: form.notes || null,
+      updated_at: new Date().toISOString(),
     };
-    setEntries((prev) => {
-      if (editingId) {
-        return prev
-          .map((e) => (e.id === editingId ? entry : e))
-          .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (editingId) {
+      const { data, error } = await supabase
+        .from("headache_entries")
+        .update(payload)
+        .eq("id", editingId)
+        .select()
+        .single();
+      if (!error && data) {
+        setEntries((prev) =>
+          prev
+            .map((e) => (e.id === editingId ? data : e))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        );
       }
-      const updated = prev.filter((e) => e.date !== form.date);
-      return [...updated, entry].sort((a, b) =>
-        a.date.localeCompare(b.date),
-      );
-    });
+    } else {
+      const { data, error } = await supabase
+        .from("headache_entries")
+        .insert(payload)
+        .select()
+        .single();
+      if (!error && data) {
+        setEntries((prev) =>
+          [...prev, data].sort((a, b) => a.date.localeCompare(b.date)),
+        );
+      }
+    }
+
+    setSaving(false);
     setSaved(true);
     setEditingId(null);
+    setForm(emptyForm());
     setTimeout(() => {
       setSaved(false);
       setView("history");
@@ -400,9 +488,21 @@ export default function HeadacheTracker() {
     setForm(emptyForm());
   }
 
-  function deleteEntry(id) {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+  async function deleteEntry(id) {
+    const { error } = await supabase
+      .from("headache_entries")
+      .delete()
+      .eq("id", id);
+    if (!error) {
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    }
     setDeleteConfirm(null);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setEntries([]);
+    setSession(null);
   }
 
   const avgPain = entries
@@ -432,9 +532,9 @@ export default function HeadacheTracker() {
     <div
       style={{
         fontFamily: "'DM Sans', 'SF Pro Display', -apple-system, sans-serif",
-        background: "#09090b",
+        background: "#FFF8F0",
         minHeight: "100dvh",
-        color: "#fafaf9",
+        color: "#2D1B00",
         padding: 0,
         overflowX: "hidden",
         WebkitFontSmoothing: "antialiased",
@@ -444,7 +544,7 @@ export default function HeadacheTracker() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        html { background: #09090b; }
+        html { background: #FFF8F0; }
         body { overscroll-behavior: none; }
         input, select, textarea, button { font-family: 'DM Sans', -apple-system, sans-serif; outline: none; }
 
@@ -454,41 +554,42 @@ export default function HeadacheTracker() {
         .ht-chip {
           display: inline-flex; align-items: center; justify-content: center;
           padding: 10px 16px; border-radius: 100px; font-size: 13px; font-weight: 500;
-          cursor: pointer; border: 1.5px solid rgba(255,255,255,0.08);
+          cursor: pointer; border: 1.5px solid rgba(45,27,0,0.08);
           margin: 4px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           user-select: none; -webkit-user-select: none;
           min-height: 42px;
         }
         .ht-chip.active {
           background: linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.15));
-          border-color: rgba(251,191,36,0.5); color: #fbbf24;
-          box-shadow: 0 0 20px rgba(251,191,36,0.1), inset 0 1px 0 rgba(255,255,255,0.1);
+          border-color: rgba(251,191,36,0.5); color: #b45309;
+          box-shadow: 0 0 20px rgba(251,191,36,0.1), inset 0 1px 0 rgba(255,255,255,0.3);
         }
-        .ht-chip:not(.active) { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); }
+        .ht-chip:not(.active) { background: rgba(45,27,0,0.05); color: rgba(45,27,0,0.5); }
         .ht-chip:active { transform: scale(0.95); }
 
         .ht-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: #FFFFFF;
+          border: 1px solid rgba(45,27,0,0.06);
           border-radius: 20px;
           padding: 20px;
           margin-bottom: 12px;
           transition: all 0.2s;
           position: relative;
           overflow: hidden;
+          box-shadow: 0 1px 3px rgba(45,27,0,0.04), 0 4px 12px rgba(45,27,0,0.03);
         }
         .ht-card::before {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+          background: linear-gradient(90deg, transparent, rgba(45,27,0,0.04), transparent);
         }
 
         .ht-input {
-          background: rgba(255,255,255,0.04);
-          border: 1.5px solid rgba(255,255,255,0.08);
+          background: rgba(45,27,0,0.03);
+          border: 1.5px solid rgba(45,27,0,0.1);
           border-radius: 14px;
-          color: #fafaf9;
+          color: #2D1B00;
           padding: 14px 16px;
           font-size: 15px;
           width: 100%;
@@ -500,34 +601,30 @@ export default function HeadacheTracker() {
           border-color: rgba(251,191,36,0.4);
           box-shadow: 0 0 0 3px rgba(251,191,36,0.08);
         }
-        .ht-input::placeholder { color: rgba(255,255,255,0.2); }
+        .ht-input::placeholder { color: rgba(45,27,0,0.3); }
 
-        select.ht-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+        select.ht-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(45,27,0,0.35)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
         input[type=range] {
           -webkit-appearance: none; width: 100%; height: 6px;
           border-radius: 3px; outline: none;
-          background: rgba(255,255,255,0.08);
+          background: rgba(45,27,0,0.08);
         }
         input[type=range]::-webkit-slider-thumb {
           -webkit-appearance: none; width: 28px; height: 28px;
           border-radius: 50%; cursor: pointer;
-          border: 3px solid #09090b;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+          border: 3px solid #FFFFFF;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(45,27,0,0.1);
         }
         input[type=range]::-moz-range-thumb {
           width: 28px; height: 28px;
           border-radius: 50%; cursor: pointer;
-          border: 3px solid #09090b;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
-
-        input[type=date]::-webkit-calendar-picker-indicator {
-          filter: invert(0.6);
+          border: 3px solid #FFFFFF;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .ht-label {
-          font-size: 11px; color: rgba(255,255,255,0.35); text-transform: uppercase;
+          font-size: 11px; color: rgba(45,27,0,0.45); text-transform: uppercase;
           letter-spacing: 0.12em; font-weight: 600; display: block; margin-bottom: 10px;
         }
 
@@ -552,7 +649,7 @@ export default function HeadacheTracker() {
 
         .ht-delete-overlay {
           position: absolute; inset: 0; z-index: 10;
-          background: rgba(9,9,11,0.92); backdrop-filter: blur(8px);
+          background: rgba(255,248,240,0.95); backdrop-filter: blur(8px);
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           border-radius: 20px; animation: htFadeIn 0.2s ease;
         }
@@ -560,8 +657,8 @@ export default function HeadacheTracker() {
         ::-webkit-scrollbar { width: 0px; }
 
         @media (hover: hover) {
-          .ht-chip:hover:not(.active) { border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); }
-          .ht-card:hover { border-color: rgba(255,255,255,0.1); }
+          .ht-chip:hover:not(.active) { border-color: rgba(45,27,0,0.15); color: rgba(45,27,0,0.65); }
+          .ht-card:hover { border-color: rgba(45,27,0,0.1); }
         }
       `}</style>
 
@@ -594,7 +691,7 @@ export default function HeadacheTracker() {
                   fontFamily: "'Instrument Serif', Georgia, serif",
                   fontSize: 32,
                   fontWeight: 400,
-                  color: "#fafaf9",
+                  color: "#2D1B00",
                   letterSpacing: "-0.02em",
                   lineHeight: 1.1,
                 }}
@@ -614,32 +711,37 @@ export default function HeadacheTracker() {
                 </span>
               </h1>
             </div>
-            <div
+            <button
+              className="ht-btn"
+              onClick={handleLogout}
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: 16,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(45,27,0,0.03)",
+                border: "1px solid rgba(45,27,0,0.08)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 20,
+                cursor: "pointer",
               }}
+              title="Sign out"
             >
               <svg
-                width="22"
-                height="22"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="rgba(251,191,36,0.6)"
+                stroke="rgba(45,27,0,0.4)"
                 strokeWidth="1.5"
                 strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <path d="M12 8v4l3 3" />
-                <circle cx="12" cy="12" r="10" />
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -652,7 +754,7 @@ export default function HeadacheTracker() {
               label: "Logged",
               value: entries.length,
               sub: entries.length === 1 ? "day" : "days",
-              color: "#fafaf9",
+              color: "#2D1B00",
             },
             {
               label: "Avg Pain",
@@ -674,17 +776,18 @@ export default function HeadacheTracker() {
             <div
               key={stat.label}
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                background: "#FFFFFF",
+                border: "1px solid rgba(45,27,0,0.06)",
                 borderRadius: 16,
                 padding: "14px 16px",
                 textAlign: "center",
+                boxShadow: "0 1px 3px rgba(45,27,0,0.04), 0 4px 12px rgba(45,27,0,0.03)",
               }}
             >
               <div
                 style={{
                   fontSize: 10,
-                  color: "rgba(255,255,255,0.3)",
+                  color: "rgba(45,27,0,0.4)",
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
                   fontWeight: 600,
@@ -706,7 +809,7 @@ export default function HeadacheTracker() {
               <div
                 style={{
                   fontSize: 11,
-                  color: "rgba(255,255,255,0.2)",
+                  color: "rgba(45,27,0,0.3)",
                   marginTop: 2,
                 }}
               >
@@ -729,7 +832,7 @@ export default function HeadacheTracker() {
         <div
           style={{
             display: "flex",
-            background: "rgba(255,255,255,0.04)",
+            background: "rgba(45,27,0,0.05)",
             borderRadius: 14,
             padding: 4,
             position: "relative",
@@ -771,8 +874,8 @@ export default function HeadacheTracker() {
                 background: "transparent",
                 color:
                   view === v
-                    ? "#fbbf24"
-                    : "rgba(255,255,255,0.3)",
+                    ? "#b45309"
+                    : "rgba(45,27,0,0.35)",
                 position: "relative",
                 zIndex: 1,
                 borderRadius: 11,
@@ -836,8 +939,8 @@ export default function HeadacheTracker() {
                   className="ht-btn"
                   onClick={cancelEdit}
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.5)",
+                    background: "rgba(45,27,0,0.06)",
+                    color: "rgba(45,27,0,0.55)",
                     padding: "6px 12px",
                     borderRadius: 8,
                     fontSize: 12,
@@ -924,7 +1027,7 @@ export default function HeadacheTracker() {
                   <div
                     style={{
                       fontSize: 12,
-                      color: "rgba(255,255,255,0.25)",
+                      color: "rgba(45,27,0,0.35)",
                     }}
                   >
                     Slide to adjust
@@ -951,7 +1054,7 @@ export default function HeadacheTracker() {
                   display: "flex",
                   justifyContent: "space-between",
                   fontSize: 10,
-                  color: "rgba(255,255,255,0.2)",
+                  color: "rgba(45,27,0,0.3)",
                   marginTop: 8,
                   fontWeight: 500,
                 }}
@@ -981,8 +1084,8 @@ export default function HeadacheTracker() {
                   className="ht-input"
                   style={{
                     color: form.onset
-                      ? "#fafaf9"
-                      : "rgba(255,255,255,0.2)",
+                      ? "#2D1B00"
+                      : "rgba(45,27,0,0.3)",
                   }}
                 >
                   <option value="">Select</option>
@@ -1012,8 +1115,8 @@ export default function HeadacheTracker() {
                   className="ht-input"
                   style={{
                     color: form.duration
-                      ? "#fafaf9"
-                      : "rgba(255,255,255,0.2)",
+                      ? "#2D1B00"
+                      : "rgba(45,27,0,0.3)",
                   }}
                 >
                   <option value="">Select</option>
@@ -1086,7 +1189,7 @@ export default function HeadacheTracker() {
                   className="ht-med-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr auto",
+                    gridTemplateColumns: "1fr 1fr 1fr auto",
                     gap: 8,
                     marginBottom: 8,
                     alignItems: "end",
@@ -1097,7 +1200,7 @@ export default function HeadacheTracker() {
                       <div
                         style={{
                           fontSize: 10,
-                          color: "rgba(255,255,255,0.25)",
+                          color: "rgba(45,27,0,0.35)",
                           marginBottom: 4,
                           fontWeight: 500,
                         }}
@@ -1125,12 +1228,12 @@ export default function HeadacheTracker() {
                       <div
                         style={{
                           fontSize: 10,
-                          color: "rgba(255,255,255,0.25)",
+                          color: "rgba(45,27,0,0.35)",
                           marginBottom: 4,
                           fontWeight: 500,
                         }}
                       >
-                        Dosage & Time
+                        Dosage
                       </div>
                     )}
                     <input
@@ -1139,7 +1242,30 @@ export default function HeadacheTracker() {
                       onChange={(e) =>
                         updateMedication(i, "dosage", e.target.value)
                       }
-                      placeholder="e.g. 200mg 2pm"
+                      placeholder="e.g. 200mg"
+                      className="ht-input"
+                      style={{ padding: "12px 14px", fontSize: 14 }}
+                    />
+                  </div>
+                  <div>
+                    {i === 0 && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "rgba(45,27,0,0.35)",
+                          marginBottom: 4,
+                          fontWeight: 500,
+                        }}
+                      >
+                        Time
+                      </div>
+                    )}
+                    <input
+                      type="time"
+                      value={med.time || ""}
+                      onChange={(e) =>
+                        updateMedication(i, "time", e.target.value)
+                      }
                       className="ht-input"
                       style={{ padding: "12px 14px", fontSize: 14 }}
                     />
@@ -1181,10 +1307,10 @@ export default function HeadacheTracker() {
                 style={{
                   width: "100%",
                   padding: "14px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1.5px dashed rgba(255,255,255,0.1)",
+                  background: "rgba(45,27,0,0.02)",
+                  border: "1.5px dashed rgba(45,27,0,0.12)",
                   borderRadius: 14,
-                  color: "rgba(255,255,255,0.4)",
+                  color: "rgba(45,27,0,0.5)",
                   fontSize: 13,
                   fontWeight: 500,
                   display: "flex",
@@ -1221,8 +1347,8 @@ export default function HeadacheTracker() {
                 className="ht-input"
                 style={{
                   color: form.relief
-                    ? "#fafaf9"
-                    : "rgba(255,255,255,0.2)",
+                    ? "#2D1B00"
+                    : "rgba(45,27,0,0.3)",
                 }}
               >
                 <option value="">Select</option>
@@ -1263,6 +1389,7 @@ export default function HeadacheTracker() {
             <button
               className="ht-btn"
               onClick={saveEntry}
+              disabled={saving}
               style={{
                 width: "100%",
                 padding: "18px",
@@ -1278,13 +1405,16 @@ export default function HeadacheTracker() {
                   ? "0 4px 20px rgba(34,197,94,0.3)"
                   : "0 4px 20px rgba(251,191,36,0.25)",
                 transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                opacity: saving ? 0.7 : 1,
               }}
             >
               {saved
                 ? "Saved"
-                : editingId
-                  ? "Update Entry"
-                  : "Save Entry"}
+                : saving
+                  ? "Saving..."
+                  : editingId
+                    ? "Update Entry"
+                    : "Save Entry"}
             </button>
           </div>
         )}
@@ -1296,7 +1426,7 @@ export default function HeadacheTracker() {
               <div
                 style={{
                   textAlign: "center",
-                  color: "rgba(255,255,255,0.2)",
+                  color: "rgba(45,27,0,0.3)",
                   padding: "80px 0",
                   fontSize: 15,
                 }}
@@ -1339,7 +1469,7 @@ export default function HeadacheTracker() {
                           style={{
                             fontSize: 15,
                             fontWeight: 600,
-                            color: "#fafaf9",
+                            color: "#2D1B00",
                             marginBottom: 4,
                           }}
                         >
@@ -1348,7 +1478,7 @@ export default function HeadacheTracker() {
                         <div
                           style={{
                             fontSize: 13,
-                            color: "rgba(255,255,255,0.4)",
+                            color: "rgba(45,27,0,0.5)",
                             marginBottom: 20,
                           }}
                         >
@@ -1360,9 +1490,9 @@ export default function HeadacheTracker() {
                             onClick={() => setDeleteConfirm(null)}
                             style={{
                               padding: "10px 24px",
-                              background: "rgba(255,255,255,0.06)",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              color: "rgba(255,255,255,0.6)",
+                              background: "rgba(45,27,0,0.06)",
+                              border: "1px solid rgba(45,27,0,0.1)",
+                              color: "rgba(45,27,0,0.65)",
                               borderRadius: 12,
                               fontSize: 13,
                               fontWeight: 500,
@@ -1402,23 +1532,12 @@ export default function HeadacheTracker() {
                         <div
                           style={{
                             fontSize: 15,
-                            color: "#fafaf9",
+                            color: "#2D1B00",
                             fontWeight: 600,
                           }}
                         >
                           {formatDate(entry.date)}
                         </div>
-                        {entry.label && (
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "rgba(255,255,255,0.3)",
-                              marginTop: 2,
-                            }}
-                          >
-                            {entry.label}
-                          </div>
-                        )}
                       </div>
                       <div
                         style={{
@@ -1460,7 +1579,7 @@ export default function HeadacheTracker() {
                           <span
                             style={{
                               fontSize: 11,
-                              color: "rgba(255,255,255,0.2)",
+                              color: "rgba(45,27,0,0.3)",
                             }}
                           >
                             —
@@ -1484,8 +1603,8 @@ export default function HeadacheTracker() {
                             fontSize: 11,
                             padding: "5px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.5)",
+                            background: "rgba(45,27,0,0.04)",
+                            color: "rgba(45,27,0,0.55)",
                             fontWeight: 500,
                           }}
                         >
@@ -1498,8 +1617,8 @@ export default function HeadacheTracker() {
                             fontSize: 11,
                             padding: "5px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.5)",
+                            background: "rgba(45,27,0,0.04)",
+                            color: "rgba(45,27,0,0.55)",
                             fontWeight: 500,
                           }}
                         >
@@ -1540,7 +1659,7 @@ export default function HeadacheTracker() {
                         <div
                           style={{
                             fontSize: 10,
-                            color: "rgba(255,255,255,0.2)",
+                            color: "rgba(45,27,0,0.3)",
                             textTransform: "uppercase",
                             letterSpacing: "0.08em",
                             fontWeight: 600,
@@ -1583,7 +1702,7 @@ export default function HeadacheTracker() {
                         <div
                           style={{
                             fontSize: 10,
-                            color: "rgba(255,255,255,0.2)",
+                            color: "rgba(45,27,0,0.3)",
                             textTransform: "uppercase",
                             letterSpacing: "0.08em",
                             fontWeight: 600,
@@ -1621,7 +1740,7 @@ export default function HeadacheTracker() {
                               />
                               <span
                                 style={{
-                                  color: "rgba(255,255,255,0.6)",
+                                  color: "rgba(45,27,0,0.65)",
                                   fontWeight: 500,
                                 }}
                               >
@@ -1630,10 +1749,20 @@ export default function HeadacheTracker() {
                               {med.dosage && (
                                 <span
                                   style={{
-                                    color: "rgba(255,255,255,0.3)",
+                                    color: "rgba(45,27,0,0.4)",
                                   }}
                                 >
                                   {med.dosage}
+                                  {med.time ? ` at ${formatTime(med.time)}` : ""}
+                                </span>
+                              )}
+                              {!med.dosage && med.time && (
+                                <span
+                                  style={{
+                                    color: "rgba(45,27,0,0.4)",
+                                  }}
+                                >
+                                  at {formatTime(med.time)}
                                 </span>
                               )}
                             </div>
@@ -1648,7 +1777,7 @@ export default function HeadacheTracker() {
                         <div
                           style={{
                             fontSize: 10,
-                            color: "rgba(255,255,255,0.2)",
+                            color: "rgba(45,27,0,0.3)",
                             textTransform: "uppercase",
                             letterSpacing: "0.08em",
                             fontWeight: 600,
@@ -1690,9 +1819,9 @@ export default function HeadacheTracker() {
                       <div
                         style={{
                           fontSize: 13,
-                          color: "rgba(255,255,255,0.4)",
+                          color: "rgba(45,27,0,0.5)",
                           borderTop:
-                            "1px solid rgba(255,255,255,0.05)",
+                            "1px solid rgba(45,27,0,0.05)",
                           paddingTop: 12,
                           marginTop: 12,
                           lineHeight: 1.6,
@@ -1711,7 +1840,7 @@ export default function HeadacheTracker() {
                         marginTop: 14,
                         paddingTop: 14,
                         borderTop:
-                          "1px solid rgba(255,255,255,0.05)",
+                          "1px solid rgba(45,27,0,0.05)",
                       }}
                     >
                       <button
@@ -1720,9 +1849,9 @@ export default function HeadacheTracker() {
                         style={{
                           flex: 1,
                           padding: "10px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          color: "rgba(255,255,255,0.5)",
+                          background: "rgba(45,27,0,0.03)",
+                          border: "1px solid rgba(45,27,0,0.08)",
+                          color: "rgba(45,27,0,0.55)",
                           borderRadius: 12,
                           fontSize: 12,
                           fontWeight: 500,
