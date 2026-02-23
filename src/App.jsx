@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Turnstile } from "@marsidev/react-turnstile";
 
@@ -118,6 +118,102 @@ const emptyForm = () => ({
   notes: "",
 });
 
+function ToastContainer({ toasts, onRemove }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 20,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        maxWidth: 420,
+        width: "calc(100% - 40px)",
+        pointerEvents: "none",
+      }}
+    >
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "13px 16px",
+            borderRadius: 14,
+            fontSize: 13,
+            fontWeight: 500,
+            lineHeight: 1.5,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",
+            pointerEvents: "all",
+            animation: "toast-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            ...(toast.type === "success" && {
+              background: "rgba(240,253,244,0.97)",
+              border: "1.5px solid rgba(74,222,128,0.35)",
+              color: "#166534",
+            }),
+            ...(toast.type === "error" && {
+              background: "rgba(254,242,242,0.97)",
+              border: "1.5px solid rgba(239,68,68,0.25)",
+              color: "#991b1b",
+            }),
+            ...(toast.type === "info" && {
+              background: "rgba(255,252,245,0.97)",
+              border: "1.5px solid rgba(251,191,36,0.35)",
+              color: "#92400e",
+            }),
+          }}
+        >
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button
+            onClick={() => onRemove(toast.id)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              opacity: 0.5,
+              fontSize: 18,
+              lineHeight: 1,
+              padding: 0,
+              color: "inherit",
+              flexShrink: 0,
+              marginTop: -1,
+            }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = useCallback((message, type = "info", duration = 7000) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, duration);
+    }
+    return id;
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  return { toasts, addToast, removeToast };
+}
+
 function AuthForm({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -125,10 +221,30 @@ function AuthForm({ onAuth }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
+  const [resetSent, setResetSent] = useState(false);
   const captchaRef = useRef(null);
+  const { toasts, addToast, removeToast } = useToasts();
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (mode === "forgot-password") {
+      setError(null);
+      setLoading(true);
+      try {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (resetError) throw resetError;
+        setResetSent(true);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!captchaToken) {
       setError("Please complete the CAPTCHA verification.");
       return;
@@ -136,11 +252,32 @@ function AuthForm({ onAuth }) {
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } =
-        mode === "login"
-          ? await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
-          : await supabase.auth.signUp({ email, password, options: { captchaToken } });
-      if (authError) throw authError;
+      if (mode === "login") {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+          options: { captchaToken },
+        });
+        if (authError) throw authError;
+      } else {
+        const { error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { captchaToken },
+        });
+        if (authError) throw authError;
+        addToast(
+          `We've sent a verification link to ${email}. Please check your inbox (and spam folder) to confirm your account before signing in.`,
+          "info",
+          0,
+        );
+        setMode("login");
+        setPassword("");
+        setCaptchaToken(null);
+        captchaRef.current?.reset();
+        setLoading(false);
+        return;
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -149,6 +286,326 @@ function AuthForm({ onAuth }) {
       captchaRef.current?.reset();
     }
   }
+
+  const inputStyle = {
+    width: "100%",
+    background: "rgba(45,27,0,0.03)",
+    border: "1.5px solid rgba(45,27,0,0.1)",
+    borderRadius: 14,
+    color: "#2D1B00",
+    padding: "14px 16px",
+    fontSize: 15,
+    WebkitAppearance: "none",
+    minHeight: 48,
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily: "'DM Sans', 'SF Pro Display', -apple-system, sans-serif",
+        background: "#FFF8F0",
+        minHeight: "100dvh",
+        color: "#2D1B00",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { background: #FFF8F0; }
+        input, button { font-family: 'DM Sans', -apple-system, sans-serif; outline: none; }
+        @keyframes toast-in {
+          from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <h1
+            style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: 36,
+              fontWeight: 400,
+              color: "#2D1B00",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}
+          >
+            Headache{" "}
+            <span
+              style={{
+                fontStyle: "italic",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Tracker
+            </span>
+          </h1>
+          <p style={{ fontSize: 14, color: "rgba(45,27,0,0.45)" }}>
+            {mode === "login"
+              ? "Welcome back"
+              : mode === "signup"
+                ? "Create your account"
+                : "Reset your password"}
+          </p>
+        </div>
+
+        {/* Forgot password – success state */}
+        {mode === "forgot-password" && resetSent ? (
+          <div>
+            <div
+              style={{
+                padding: "16px 18px",
+                background: "rgba(240,253,244,0.9)",
+                border: "1.5px solid rgba(74,222,128,0.35)",
+                borderRadius: 14,
+                color: "#166534",
+                fontSize: 14,
+                lineHeight: 1.6,
+                marginBottom: 24,
+              }}
+            >
+              <strong>Check your inbox.</strong> We sent a password reset link to <strong>{email}</strong>. It may take a minute to arrive — also check your spam folder.
+            </div>
+            <button
+              onClick={() => {
+                setMode("login");
+                setResetSent(false);
+                setEmail("");
+              }}
+              style={{
+                width: "100%",
+                padding: "16px",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                color: "#09090b",
+                border: "none",
+                borderRadius: 14,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 16 }}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            {mode !== "forgot-password" && (
+              <div style={{ marginBottom: mode === "login" ? 8 : 20 }}>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  minLength={6}
+                  style={inputStyle}
+                />
+              </div>
+            )}
+
+            {mode === "login" && (
+              <div style={{ textAlign: "right", marginBottom: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("forgot-password");
+                    setError(null);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "rgba(45,27,0,0.45)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    padding: 0,
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            {mode === "forgot-password" && (
+              <div style={{ marginBottom: 20 }} />
+            )}
+
+            {error && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "12px 16px",
+                  background: "rgba(239,68,68,0.08)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  borderRadius: 12,
+                  color: "#f87171",
+                  fontSize: 13,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {mode !== "forgot-password" && (
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                <Turnstile
+                  ref={captchaRef}
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                  options={{ theme: "light" }}
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || (mode !== "forgot-password" && !captchaToken)}
+              style={{
+                width: "100%",
+                padding: "16px",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                color: "#09090b",
+                border: "none",
+                borderRadius: 14,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: loading || (mode !== "forgot-password" && !captchaToken) ? "not-allowed" : "pointer",
+                opacity: loading || (mode !== "forgot-password" && !captchaToken) ? 0.7 : 1,
+                boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {loading
+                ? "..."
+                : mode === "login"
+                  ? "Sign In"
+                  : mode === "signup"
+                    ? "Sign Up"
+                    : "Send Reset Link"}
+            </button>
+          </form>
+        )}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 24,
+            fontSize: 13,
+            color: "rgba(45,27,0,0.45)",
+          }}
+        >
+          {mode === "forgot-password" ? (
+            <>
+              Remember your password?{" "}
+              <button
+                onClick={() => {
+                  setMode("login");
+                  setError(null);
+                  setResetSent(false);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#fbbf24",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                Sign in
+              </button>
+            </>
+          ) : (
+            <>
+              {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                onClick={() => {
+                  setMode(mode === "login" ? "signup" : "login");
+                  setError(null);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#fbbf24",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                {mode === "login" ? "Sign up" : "Sign in"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UpdatePasswordForm({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      setSuccess(true);
+      setTimeout(onDone, 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const inputStyle = {
+    width: "100%",
+    background: "rgba(45,27,0,0.03)",
+    border: "1.5px solid rgba(45,27,0,0.1)",
+    borderRadius: 14,
+    color: "#2D1B00",
+    padding: "14px 16px",
+    fontSize: 15,
+    WebkitAppearance: "none",
+    minHeight: 48,
+  };
 
   return (
     <div
@@ -197,133 +654,87 @@ function AuthForm({ onAuth }) {
               Tracker
             </span>
           </h1>
-          <p style={{ fontSize: 14, color: "rgba(45,27,0,0.45)" }}>
-            {mode === "login" ? "Welcome back" : "Create your account"}
-          </p>
+          <p style={{ fontSize: 14, color: "rgba(45,27,0,0.45)" }}>Set a new password</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              required
-              style={{
-                width: "100%",
-                background: "rgba(45,27,0,0.03)",
-                border: "1.5px solid rgba(45,27,0,0.1)",
-                borderRadius: 14,
-                color: "#2D1B00",
-                padding: "14px 16px",
-                fontSize: 15,
-                WebkitAppearance: "none",
-                minHeight: 48,
-              }}
-            />
+        {success ? (
+          <div
+            style={{
+              padding: "16px 18px",
+              background: "rgba(240,253,244,0.9)",
+              border: "1.5px solid rgba(74,222,128,0.35)",
+              borderRadius: 14,
+              color: "#166534",
+              fontSize: 14,
+              lineHeight: 1.6,
+              textAlign: "center",
+            }}
+          >
+            <strong>Password updated!</strong> Redirecting you now…
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              minLength={6}
-              style={{
-                width: "100%",
-                background: "rgba(45,27,0,0.03)",
-                border: "1.5px solid rgba(45,27,0,0.1)",
-                borderRadius: 14,
-                color: "#2D1B00",
-                padding: "14px 16px",
-                fontSize: 15,
-                WebkitAppearance: "none",
-                minHeight: 48,
-              }}
-            />
-          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 16 }}>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                required
+                minLength={6}
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Confirm new password"
+                required
+                minLength={6}
+                style={inputStyle}
+              />
+            </div>
 
-          {error && (
-            <div
+            {error && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "12px 16px",
+                  background: "rgba(239,68,68,0.08)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  borderRadius: 12,
+                  color: "#f87171",
+                  fontSize: 13,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
               style={{
-                marginBottom: 16,
-                padding: "12px 16px",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.2)",
-                borderRadius: 12,
-                color: "#f87171",
-                fontSize: 13,
+                width: "100%",
+                padding: "16px",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                color: "#09090b",
+                border: "none",
+                borderRadius: 14,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.7 : 1,
+                boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
+                letterSpacing: "0.02em",
               }}
             >
-              {error}
-            </div>
-          )}
-
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <Turnstile
-              ref={captchaRef}
-              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-              onSuccess={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-              options={{ theme: "light" }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !captchaToken}
-            style={{
-              width: "100%",
-              padding: "16px",
-              background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
-              color: "#09090b",
-              border: "none",
-              borderRadius: 14,
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: loading || !captchaToken ? "not-allowed" : "pointer",
-              opacity: loading || !captchaToken ? 0.7 : 1,
-              boxShadow: "0 4px 20px rgba(251,191,36,0.25)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {loading
-              ? "..."
-              : mode === "login"
-                ? "Sign In"
-                : "Sign Up"}
-          </button>
-        </form>
-
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: 24,
-            fontSize: 13,
-            color: "rgba(45,27,0,0.45)",
-          }}
-        >
-          {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button
-            onClick={() => {
-              setMode(mode === "login" ? "signup" : "login");
-              setError(null);
-            }}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#fbbf24",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            {mode === "login" ? "Sign up" : "Sign in"}
-          </button>
-        </div>
+              {loading ? "Updating…" : "Update Password"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -332,6 +743,7 @@ function AuthForm({ onAuth }) {
 export default function HeadacheTracker() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [entries, setEntries] = useState([]);
   const [view, setView] = useState("log");
   const [form, setForm] = useState(emptyForm());
@@ -349,7 +761,12 @@ export default function HeadacheTracker() {
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+      } else {
+        setPasswordRecovery(false);
+      }
       setSession(s);
     });
     return () => subscription.unsubscribe();
@@ -385,6 +802,10 @@ export default function HeadacheTracker() {
         Loading...
       </div>
     );
+  }
+
+  if (passwordRecovery) {
+    return <UpdatePasswordForm onDone={() => setPasswordRecovery(false)} />;
   }
 
   if (!session) {
@@ -570,6 +991,11 @@ export default function HeadacheTracker() {
 
         .ht-btn { cursor: pointer; border: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); -webkit-appearance: none; }
         .ht-btn:active { transform: scale(0.97); }
+
+        @keyframes toast-in {
+          from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
 
         .ht-chip {
           display: inline-flex; align-items: center; justify-content: center;
